@@ -1,0 +1,97 @@
+# Extension Definition File
+# This file defines the rules and modifiers for various extensions.
+TLP: CLEAR # Default TLP
+
+extensions:
+  SFDC:
+    TLP: AMBER # Example of TLP for versions without a TLP
+    "1.0":
+      TLP: GREEN # TLP for this version of SFDC
+      metrics:
+        AKC:
+          name: "Attack Kill Chain"
+          help: "Plausible (regardless of difficulty/skill) attack kill chain?"
+          help_true: "Attack kill chain is plausible"
+          help_false: "Attack kill chain is not plausible"
+          type: BOOL # Type BOOL implies values of T/F
+          if_true:
+            math: MUL
+            val: 0.1
+          if_false:
+            math: MUL
+            val: -0.1
+        KEV:
+          name: "Known Exploited Vulnerability"
+          help: "Published in CISA KEV?"
+          help_true: "Published in CISA KEV"
+          help_false: "Not published in CISA KEV"
+          type: BOOL
+          if_true:
+            math: MUL
+            val: 0.05
+          if_false:
+            math: MUL
+            val: 0
+        EXT:
+          name: "Exposed Externally"
+          help: "Externally exposed (directly or indirectly), proxies and firewalls are irrelevant. If an inbound payload reaches a system the response is True (T)."
+          help_true: "If an inbound payload reach a system the response is True (T)."
+          help_false: "If an inbound payload DOES NOT reach a system the response is False (F)."
+          type: BOOL
+          if_true:
+            math: MUL
+            val: 0.04
+          if_false:
+            math: MUL
+            val: -0.04
+        ICTS:
+          name: "Impact Cross Tenant or Service"
+          help: "Impact Cross Tenant or Service"
+          help_true: "Possible Impact: Cross Tenant or Service"
+          help_false: "No Possible Impact: Cross Tenant or Service"
+          type: BOOL
+          if_true:
+            math: MUL
+            val: 0.06
+          if_false:
+            math: MUL
+            val: -0.06
+      combos:
+        - name: "AKC and EXT"
+          conditions:
+            - metric: SFDC_AKC
+              value: T
+            - metric: SFDC_EXT
+              value: T
+          modifier:
+            math: ADD
+            val: 0.8
+        - name: "AKC, EXT, and KEV"
+          conditions:
+            - metric: SFDC_AKC
+              value: T
+            - metric: SFDC_EXT
+              value: T
+            - metric: SFDC_KEV
+              value: T
+          modifier:
+            math: ADD
+            val: 0.85
+        - name: "EXT and KEV"
+          conditions:
+            - metric: SFDC_EXT
+              value: T
+            - metric: SFDC_KEV
+              value: T
+          modifier:
+            math: ADD
+            val: 0.1
+        - name: "ICTS and AKC"
+          conditions:
+            - metric: SFDC_ICTS
+              value: T
+            - metric: SFDC_AKC
+              value: T
+          modifier:
+            math: ADD
+            val: 0.8

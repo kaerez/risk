@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, shrink-to-fit=no">
+    <title>Common Vulnerability Scoring System Version 4.0 Calculator</title>
+    <script src="https://unpkg.com/vue@3.2.45/dist/vue.global.prod.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/js-yaml@4.1.0/dist/js-yaml.min.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/spectre.css@0.5.9/dist/spectre.min.css">
+    <link rel="stylesheet" href="https://unpkg.com/spectre.css@0.5.9/dist/spectre-exp.min.css">
+    <link rel="stylesheet" href="https://unpkg.com/spectre.css@0.5.9/dist/spectre-icons.min.css">
+    <link rel="stylesheet" href="styles.css">
+    <link rel="icon" href="data:,">
+</head>
+<body>
+    <div id="app" class="container">
+        <header id="header">
+            <div class="header-top-row">
+                <div class="logo-container">
+                    <h3 class="custom-title">KSEC</h3>
+                    <img alt="CVSS logo" src="https://first.org/cvss/identity/cvssv4_web.png" width="125">
+                </div>
+                <div class="tlp-label" :style="tlpStyle">{{ currentTLP }}</div>
+            </div>
+
+            <h3 class="page-title">Common Vulnerability Scoring System Version 4.0 Calculator with Extension Support</h3>
+            <mark
+                class="tooltip c-hand"
+                aria-label="Click to copy vector to clipboard"
+                data-tooltip="Click vector to copy to clipboard"
+                role="button"
+                tabindex="0"
+                @click="copyVector">
+                {{ vector }}
+            </mark>
+            <button class="btn btn-sm ml-2" @click="onReset()">Reset</button>
+            <h5 class="score-line">
+                <span
+                    class="tooltip tooltip-bottom c-hand"
+                    :data-tooltip="showDetails ? 'Hide details' : 'Show details'"
+                    :aria-label="showDetails ? 'Hide details' : 'Show details'"
+                    role="button"
+                    tabindex="0"
+                    @click="showDetails = !showDetails">
+                    CVSS v4.0 Score:
+                    <span :class="getSeverityClass(severityRating)">{{ score }} / {{ severityRating }}</span>
+                    <span v-if="!showDetails"> ⊕ </span>
+                    <span v-else> ⊖</span>
+                </span><span v-if="finalScore !== null" class="extension-score">
+                    &nbsp;{{ extensionName }} v{{ extensionVersion }} Score:
+                    <span :class="getSeverityClass(finalSeverity)">{{ finalScore }} / {{ finalSeverity }}</span>
+                </span>
+            </h5>
+
+            <blockquote v-if="showDetails" class="details-container">
+                <div class="cvss-details">
+                    <sup class="mb-2"><i>Macro vector: {{ macroVector }}</i></sup>
+                    <div v-for="(severity, description) in vectorInstance.severityBreakdown" :key="description">
+                        {{ description }}: {{ severity }}
+                    </div>
+                </div>
+                <div v-if="extensionCalculationDetails" class="extension-details">
+                    <sup class="mb-2"><i>{{ extensionName }} v{{ extensionVersion }} Calculation</i></sup>
+                    <div class="extension-detail-item" v-for="metric in extensionCalculationDetails.metrics">
+                        <span v-if="metric.modifier !== undefined">
+                            {{ metric.name }} ({{ metric.key }}): {{ metric.value }} ({{ metric.modifier.toFixed(3) }})
+                            <span class="na-note" v-if="metric.inValidCombo">*NA - Exists In A Valid Combination</span>
+                        </span>
+                    </div>
+                    <div class="extension-detail-item text-bold mt-2">Combinations:</div>
+                    <div class="extension-detail-item" v-for="combo in extensionCalculationDetails.combos">
+                         {{ combo.name }}: {{ combo.isValid ? 'True' : 'False' }}
+                        <span v-if="combo.status === 'winning'" class="na-note">*Valid Combination</span>
+                        <span v-if="combo.status === 'losing_valid' && combo.modifier !== undefined" class="na-note">({{ combo.modifier.toFixed(3) }}) *NA - Better Valid Combination</span>
+                    </div>
+                </div>
+            </blockquote>
+
+        </header>
+
+        <main class="columns" :style="{'margin-top': header_height + 10 + 'px'}">
+            <h6 id="cvssReference" style="width: 100%; max-width: 1065px; margin: 10px;">
+                Hover over metric names and metric values for a summary of the information in the official
+                <a href="https://www.first.org/cvss/v4.0/specification-document" target="_blank">
+                    CVSS v4.0 Specification Document
+                </a>.
+                The Specification is available along with a
+                <a href="https://www.first.org/cvss/v4.0/user-guide" target="_blank">
+                    User Guide
+                </a>
+                providing additional scoring guidance, an
+                <a href="https://www.first.org/cvss/v4.0/examples" target="_blank">
+                    Examples document
+                </a>
+                of scored vulnerabilities, a set of
+                <a href="https://www.first.org/cvss/v4.0/faq" target="_blank">
+                    Frequently Asked Questions (FAQ)
+                </a>, and both JSON and XML Data Representations for all versions of CVSS, including the
+                <a href="https://www.first.org/cvss/cvss-v4.0.json" target="_blank">
+                    JSON format
+                </a>.
+                <br><br>
+                <span class="copyright-text">
+                    (C) 2025 KSEC - Erez Kalman on all code and enhancements in this software, over the original version. Refer to
+                    <a href="https://www.first.org/cvss/v4.0" target="_blank">
+                        First.org
+                    </a> for the original version. Original code is not copyrighted by me, see original version for details.<br>
+                    May not be sold, enhanced, modified, packaged, licensed, hosted, run, operated, distributed, or used for commercial purposes or by a third party or in a commercial/business without permission.
+                </span>
+            </h6>
+            <div class="column col-10 col-xl-12">
+                <!-- Extension Selection Dropdowns -->
+                <div class="extension-selector-container">
+                    <div class="form-group">
+                        <label class="form-label" for="ext-select">Extension</label>
+                        <select class="form-select" id="ext-select" v-model="selectedExtension">
+                            <option value="None">None</option>
+                            <option v-for="ext in availableExtensions" :value="ext">{{ ext }}</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="ver-select">Version</label>
+                        <select class="form-select" id="ver-select" v-model="selectedVersion" :disabled="selectedExtension === 'None' || availableVersions.length <= 1">
+                            <option v-if="availableVersions.length === 0" value="" disabled>&nbsp;</option>
+                            <option v-for="ver in availableVersions" :value="ver">{{ ver }}</option>
+                        </select>
+                    </div>
+                     <button class="btn btn-primary btn-sm scroll-btn" @click="scrollToExtensionMetrics" v-if="selectedExtension !== 'None'">↓ Go to {{ selectedExtension }} Metrics</button>
+                </div>
+
+                <!-- CVSS Base Metrics -->
+                <div class="metric-type" v-for="(metricTypeData, metricType) in cvssConfigData" :key="metricType">
+                    <h4 class="text-center" :id="metricType.replace(/\s+/g, '-')">
+                        {{ metricType }}
+                    </h4>
+                    <div class="metric-group" v-for="(metricGroupData, metricGroup) in metricTypeData.metric_groups" :key="metricGroup">
+                        <h5 class="text-center">{{ metricGroup }}</h5>
+                        <div>
+                            <div class="" v-for="(metricData, metric) in metricGroupData" :key="metric">
+                                <div class="columns hide-xl mb-2">
+                                    <div class="col-3 text-right pr-2" v-if="metricData.tooltip"><abbr :title="metricData.tooltip">{{ metric }}</abbr>:</div>
+                                    <div class="col-3 text-right pr-2" v-else>{{metric}}:</div>
+                                    <div class="col-9 columns">
+                                        <div class="col-2 pl-2" v-for="(optionData, option) in metricData.options" :key="option">
+                                            <button :class="buttonClass(vectorInstance.metrics[metricData.short] == optionData.value)" v-if="option"
+                                                    @click="onButton(metricData.short, optionData.value)">
+                                                <abbr v-if="optionData.tooltip" :title="optionData.tooltip">{{ option }}</abbr>
+                                                <span v-else>{{ option }}</span>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <!-- Other responsive layouts... -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Extension Metrics -->
+                <div class="metric-type" v-if="currentExtensionMetrics" id="extension-metrics-section" :key="selectedExtension">
+                    <h4 class="text-center">{{ selectedExtension }} Metrics</h4>
+                    <div class="metric-group">
+                        <div v-for="(metricData, metricKey) in currentExtensionMetrics" :key="metricKey">
+                             <div class="columns hide-xl mb-2">
+                                <div class="col-3 text-right pr-2"><abbr :title="metricData.help">{{ metricData.name }} ({{ metricKey }})</abbr>:</div>
+                                <div class="col-9 columns">
+                                    <div class="col-2 pl-2" v-for="option in getExtensionOptions(metricData)" :key="option.value">
+                                        <button :class="buttonClass(vectorInstance.metrics[metricKey] == option.value)"
+                                                @click="onButton(metricKey, option.value)">
+                                            <abbr :title="getExtensionOptionHelp(metricData, option.value)">{{ option.text }}</abbr>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- Other responsive layouts for extension metrics can be added here -->
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </main>
+         <!-- Scroll to Top Button -->
+        <button class="btn btn-primary btn-action s-circle scroll-to-top" v-if="showScrollToTop" @click="scrollToTop">
+            <i class="icon icon-arrow-up"></i>
+        </button>
+    </div>
+    <script src="cvss40.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>

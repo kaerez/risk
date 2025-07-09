@@ -1,0 +1,147 @@
+# Extension Demo Definition File
+# Extension file name must be: extension.yaml
+# This file defines the rules and modifiers for various extensions.
+TLP: CLEAR # Default TLP
+
+extensions:
+  SFDC:
+    TLP: AMBER # Example of TLP for versions without a TLP
+    "1.0":
+      TLP: GREEN # TLP for this version of SFDC
+      metrics:
+        AKC:
+          name: "Attack Kill Chain"
+          help: "Plausible (regardless of difficulty/skill) attack kill chain?"
+          help_true: "Attack kill chain is plausible"
+          help_false: "Attack kill chain is not plausible"
+          type: BOOL # Type BOOL implies values of T/F
+          if_true:
+            math: MUL
+            val: 0.1
+          if_false:
+            math: MUL
+            val: -0.1
+        KEV:
+          name: "Known Exploited Vulnerability"
+          help: "Published in CISA KEV?"
+          help_true: "Published in CISA KEV"
+          help_false: "Not published in CISA KEV"
+          type: BOOL
+          if_true:
+            math: MUL
+            val: 0.05
+          if_false:
+            math: MUL
+            val: 0
+        EXT:
+          name: "Exposed Externally"
+          help: "Externally exposed (directly or indirectly), proxies and firewalls are irrelevant. If an inbound payload reaches a system the response is True (T)."
+          help_true: "If an inbound payload reach a system the response is True (T)."
+          help_false: "If an inbound payload DOES NOT reach a system the response is False (F)."
+          type: BOOL
+          if_true:
+            math: MUL
+            val: 0.04
+          if_false:
+            math: MUL
+            val: -0.04
+        ICTS:
+          name: "Impact Cross Tenant or Service"
+          help: "Impact Cross Tenant or Service"
+          help_true: "Possible Impact: Cross Tenant or Service"
+          help_false: "No Possible Impact: Cross Tenant or Service"
+          type: BOOL
+          if_true:
+            math: MUL
+            val: 0.06
+          if_false:
+            math: MUL
+            val: -0.06
+        SFDC_RISK: # Example of a metric with a custom list of values
+          name: "Business Risk"
+          type: [HIGH, MED, LOW]
+          values:
+            HIGH:
+              help: "What high means" # Example showing the on hover help when hovering over high button
+              math: ADD
+              val: 0.5
+            MED:
+              math: ADD
+              val: 0.2
+            LOW:
+              math: ADD
+              val: 0
+      combos:
+        - name: "AKC and EXT"
+          conditions:
+            - metric: SFDC_AKC
+              value: T
+            - metric: SFDC_EXT
+              value: T
+          modifier:
+            math: ADD
+            val: 0.8
+        - name: "AKC, EXT, and KEV"
+          conditions:
+            - metric: SFDC_AKC
+              value: T
+            - metric: SFDC_EXT
+              value: T
+            - metric: SFDC_KEV
+              value: T
+          modifier:
+            math: ADD
+            val: 0.85
+        - name: "EXT and KEV"
+          conditions:
+            - metric: SFDC_EXT
+              value: T
+            - metric: SFDC_KEV
+              value: T
+          modifier:
+            math: ADD
+            val: 0.1
+        - name: "ICTS and AKC"
+          conditions:
+            - metric: SFDC_ICTS
+              value: T
+            - metric: SFDC_AKC
+              value: T
+          modifier:
+            math: ADD
+            val: 0.8
+        - name: "RISK is HIGH or MED, and EXT is True"
+          conditions:
+            - metric: SFDC_RISK
+              value: [HIGH, MED] # This implies an OR condition for the value
+            - metric: SFDC_EXT
+              value: T
+          modifier:
+            math: ADD
+            val: 0.9 # Example value
+    "1.1": # Example of another version for the same extension
+      metrics:
+        SFDC_AKC: # Metric might have different values in a new version
+          name: "Attacker Knowledge of Code"
+          type: BOOL
+          if_true:
+            math: MUL
+            val: 0.12
+          if_false:
+            math: MUL
+            val: -0.12
+      combos: {} # This version might have no combos yet
+
+  EXAMPLE_EXT: # Example of another extension
+    "1.0":
+      metrics:
+        EXAMPLE_FLAG:
+          name: "Example Flag"
+          type: BOOL
+          if_true:
+            math: ADD
+            val: 0.5
+          if_false:
+            math: ADD
+            val: 0
+      combos: {}
