@@ -12,4 +12,4 @@ See the [LICENSE](./LICENSE) file for more information.
 
 Original code is licensed under the BSD-2-Clause License.
  
-Licensed for: Salesforce internal use only.
+Licensed for: [UNLICENSED]
