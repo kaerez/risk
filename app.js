@@ -1,4 +1,4 @@
-// Original version: BSD-2 Clause | Copyright FIRST, Red Hat, and contributors
+// Original version: Copyright FIRST, Red Hat, and contributors
 // Current version: Copyright (C) KSEC - Erez Kalman
 
 class ExtensionCalculator {
@@ -314,6 +314,33 @@ const app = Vue.createApp({
                 });
             }
         },
+        setDefaultExtension() {
+            if (this.extensionYAML && Array.isArray(this.extensionYAML.default_ext) && this.extensionYAML.default_ext.length === 2) {
+                const [defaultExt, defaultVer] = this.extensionYAML.default_ext;
+                if (this.availableExtensions.includes(defaultExt)) {
+                    this.isLoadingFromHash = true; // Block watchers during programmatic update
+                    this.selectedExtension = defaultExt;
+                    this.availableVersions = Object.keys(this.extensionYAML.extensions[defaultExt])
+                        .filter(key => typeof this.extensionYAML.extensions[defaultExt][key] === 'object' && this.extensionYAML.extensions[defaultExt][key].metrics);
+                    
+                    if(this.availableVersions.includes(defaultVer)) {
+                        this.selectedVersion = defaultVer;
+                    } else {
+                        this.selectedVersion = this.availableVersions.length > 0 ? this.availableVersions[0] : '';
+                    }
+
+                    this.updateVectorWithExtension();
+                    
+                    this.$nextTick(() => {
+                        this.isLoadingFromHash = false; // Re-enable watchers
+                    });
+                } else {
+                    this.updateScores();
+                }
+            } else {
+                this.updateScores();
+            }
+        },
         updateScores() {
             this.cvssInstance = new CVSS40(this.vectorInstance);
             this.macroVector = this.vectorInstance.equivalentClasses;
@@ -398,8 +425,8 @@ const app = Vue.createApp({
         },
         onReset() {
             window.location.hash = "";
-            this.vectorInstance = new Vector();
-            this.selectedExtension = 'None';
+            this.vectorInstance.resetMetrics();
+            this.setDefaultExtension();
         },
         scrollToExtensionMetrics() {
             const el = document.getElementById('extension-metrics-section');
@@ -485,7 +512,7 @@ const app = Vue.createApp({
         if (window.location.hash) {
            this.setButtonsToVector(window.location.hash.slice(1));
         } else {
-           this.updateScores();
+           this.setDefaultExtension();
         }
     },
     mounted() {

@@ -3,11 +3,12 @@
 TLP: CLEAR # Default TLP
 hide: "none" # "none" to show all, you can include item/section. can also be added inside the extension before/under the version and at the top level before the extensions. E.g. ["Supplemental Metrics", "Environmental (Security Requirements)", "MSC", "MSI"]
 disable: "none" # "none" to enable all, you can include item/section. can also be added inside the extension before/under the version and at the top level before the extensions. E.g. "MSA"
+default_ext: ["SFDC", "1.0"] # Default extension and version to use if no extension is selected (e.g. initial load without CVSS vector string).
 
 extensions:
   SFDC:
     TLP: AMBER # Example of TLP for versions without a TLP
-    disable: "Supplemental Metrics"
+    hide: "Supplemental Metrics"
     "1.0":
       TLP: GREEN # TLP for this version of SFDC
       metrics:
@@ -62,38 +63,38 @@ extensions:
       combos:
         - name: "AKC and EXT"
           conditions:
-            - metric: SFDC_AKC
+            - metric: AKC
               value: T
-            - metric: SFDC_EXT
+            - metric: EXT
               value: T
           modifier:
             math: ADD
             val: 0.8
         - name: "AKC, EXT, and KEV"
           conditions:
-            - metric: SFDC_AKC
+            - metric: AKC
               value: T
-            - metric: SFDC_EXT
+            - metric: EXT
               value: T
-            - metric: SFDC_KEV
+            - metric: KEV
               value: T
           modifier:
             math: ADD
             val: 0.85
         - name: "EXT and KEV"
           conditions:
-            - metric: SFDC_EXT
+            - metric: EXT
               value: T
-            - metric: SFDC_KEV
+            - metric: KEV
               value: T
           modifier:
             math: ADD
             val: 0.1
         - name: "ICTS and AKC"
           conditions:
-            - metric: SFDC_ICTS
+            - metric: ICTS
               value: T
-            - metric: SFDC_AKC
+            - metric: AKC
               value: T
           modifier:
             math: ADD
