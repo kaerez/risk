@@ -1,10 +1,13 @@
 # Extension Definition File
 # This file defines the rules and modifiers for various extensions.
 TLP: CLEAR # Default TLP
+hide: "none" # "none" to show all, you can include item/section. can also be added inside the extension before/under the version and at the top level before the extensions. E.g. ["Supplemental Metrics", "Environmental (Security Requirements)", "MSC", "MSI"]
+disable: "none" # "none" to enable all, you can include item/section. can also be added inside the extension before/under the version and at the top level before the extensions. E.g. "MSA"
 
 extensions:
   SFDC:
     TLP: AMBER # Example of TLP for versions without a TLP
+    disable: "Supplemental Metrics"
     "1.0":
       TLP: GREEN # TLP for this version of SFDC
       metrics:

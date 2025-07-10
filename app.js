@@ -1,5 +1,5 @@
-// Copyright FIRST, Red Hat, and contributors
-// SPDX-License-Identifier: BSD-2-Clause
+// Original version: BSD-2 Clause | Copyright FIRST, Red Hat, and contributors
+// Current version: Copyright (C) KSEC - Erez Kalman
 
 class ExtensionCalculator {
     constructor(baseScore, extensionRules) {
@@ -156,7 +156,7 @@ const app = Vue.createApp({
             } else {
                 this.availableVersions = Object.keys(this.extensionYAML.extensions[newExt])
                     .filter(key => typeof this.extensionYAML.extensions[newExt][key] === 'object' && this.extensionYAML.extensions[newExt][key].metrics);
-                
+
                 if (this.availableVersions.length > 0) {
                     this.selectedVersion = this.availableVersions[0];
                 } else {
@@ -170,6 +170,9 @@ const app = Vue.createApp({
         }
     },
     methods: {
+        isMetricDisabled(metricData, metricType) {
+            return this.activeRules.disable.has(metricType) || this.activeRules.disable.has(metricData.short);
+        },
         async loadConfigData() {
             try {
                 const response = await fetch('./metrics.json');
@@ -183,9 +186,12 @@ const app = Vue.createApp({
                 const response = await fetch('./extension.yaml');
                 const yamlText = await response.text();
                 this.extensionYAML = jsyaml.load(yamlText);
-                this.availableExtensions = Object.keys(this.extensionYAML.extensions);
+                if (this.extensionYAML && this.extensionYAML.extensions) {
+                    this.availableExtensions = Object.keys(this.extensionYAML.extensions);
+                }
             } catch (error) {
-                console.error("Failed to load extension.yaml:", error);
+                console.error("Failed to load or parse extension.yaml:", error);
+                this.extensionYAML = null;
             }
         },
         updateVectorWithExtension() {
@@ -209,7 +215,7 @@ const app = Vue.createApp({
                     }
                 }
             }
-            
+
             window.location.hash = this.vectorInstance.raw;
             this.updateScores();
         },
@@ -254,61 +260,59 @@ const app = Vue.createApp({
         },
         setButtonsToVector(vector) {
             this.isLoadingFromHash = true;
-            this.$nextTick(() => {
-                try {
-                    const tempMetrics = vector.split('/').slice(1).reduce((acc, part) => {
-                        const [key, val] = part.split(':');
-                        if (key) acc[key] = val;
-                        return acc;
-                    }, {});
+            try {
+                const tempMetrics = vector.split('/').slice(1).reduce((acc, part) => {
+                    const [key, val] = part.split(':');
+                    if (key) acc[key] = val;
+                    return acc;
+                }, {});
 
-                    let extNameFromVector = 'None';
-                    let extVersionFromVector = '';
+                let extNameFromVector = 'None';
+                let extVersionFromVector = '';
 
-                    if (this.extensionYAML) {
-                        for (const extName in this.extensionYAML.extensions) {
-                            if (tempMetrics[extName]) {
-                                extNameFromVector = extName;
-                                extVersionFromVector = tempMetrics[extName];
-                                break;
-                            }
+                if (this.extensionYAML && this.extensionYAML.extensions) {
+                    for (const extName in this.extensionYAML.extensions) {
+                        if (tempMetrics[extName]) {
+                            extNameFromVector = extName;
+                            extVersionFromVector = tempMetrics[extName];
+                            break;
                         }
                     }
-                    
-                    this.selectedExtension = extNameFromVector;
-                    if (extNameFromVector !== 'None') {
-                        this.availableVersions = Object.keys(this.extensionYAML.extensions[extNameFromVector])
-                            .filter(key => typeof this.extensionYAML.extensions[extNameFromVector][key] === 'object' && this.extensionYAML.extensions[extNameFromVector][key].metrics);
-                    } else {
-                        this.availableVersions = [];
-                    }
-                    this.selectedVersion = extVersionFromVector;
-
-                    this.vectorInstance.updateMetricsFromVectorString(vector);
-                    
-                    if (extNameFromVector !== 'None' && this.selectedVersion) {
-                        const extMetrics = this.extensionYAML.extensions[extNameFromVector][extVersionFromVector].metrics;
-                        for (const metricKey in extMetrics) {
-                            if (this.vectorInstance.metrics[metricKey] === undefined) {
-                                const metricDef = extMetrics[metricKey];
-                                 if (metricDef.type === 'BOOL') {
-                                    this.vectorInstance.metrics[metricKey] = 'F';
-                                } else if (Array.isArray(metricDef.type)) {
-                                    this.vectorInstance.metrics[metricKey] = metricDef.type[0];
-                                }
-                            }
-                        }
-                    }
-
-                    this.updateScores();
-                } catch (error) {
-                     console.error("Error updating vector:", error.message);
-                } finally {
-                    this.$nextTick(() => {
-                        this.isLoadingFromHash = false;
-                    });
                 }
-            });
+
+                this.selectedExtension = extNameFromVector;
+                if (extNameFromVector !== 'None') {
+                    this.availableVersions = Object.keys(this.extensionYAML.extensions[extNameFromVector])
+                        .filter(key => typeof this.extensionYAML.extensions[extNameFromVector][key] === 'object' && this.extensionYAML.extensions[extNameFromVector][key].metrics);
+                } else {
+                    this.availableVersions = [];
+                }
+                this.selectedVersion = extVersionFromVector;
+
+                this.vectorInstance.updateMetricsFromVectorString(vector);
+
+                if (extNameFromVector !== 'None' && this.selectedVersion) {
+                    const extMetrics = this.extensionYAML.extensions[extNameFromVector][extVersionFromVector].metrics;
+                    for (const metricKey in extMetrics) {
+                        if (this.vectorInstance.metrics[metricKey] === undefined) {
+                            const metricDef = extMetrics[metricKey];
+                             if (metricDef.type === 'BOOL') {
+                                this.vectorInstance.metrics[metricKey] = 'F';
+                            } else if (Array.isArray(metricDef.type)) {
+                                this.vectorInstance.metrics[metricKey] = metricDef.type[0];
+                            }
+                        }
+                    }
+                }
+
+                this.updateScores();
+            } catch (error) {
+                 console.error("Error updating vector:", error.message);
+            } finally {
+                this.$nextTick(() => {
+                    this.isLoadingFromHash = false;
+                });
+            }
         },
         updateScores() {
             this.cvssInstance = new CVSS40(this.vectorInstance);
@@ -321,7 +325,7 @@ const app = Vue.createApp({
             this.extensionCalculationDetails = null;
 
             if (!this.extensionYAML) return;
-            
+
             let tlpColor = this.extensionYAML.TLP || 'CLEAR';
             if (this.selectedExtension !== 'None' && this.extensionYAML.extensions[this.selectedExtension]) {
                 const extensionLevel = this.extensionYAML.extensions[this.selectedExtension];
@@ -336,7 +340,7 @@ const app = Vue.createApp({
             this.currentTLP = `TLP:${tlpColor}`;
 
             if (this.selectedExtension === 'None') return;
-            
+
             const currentExtRules = this.extensionYAML.extensions[this.selectedExtension][this.selectedVersion];
             if (!currentExtRules) return;
 
@@ -349,7 +353,7 @@ const app = Vue.createApp({
             if (result.score !== null) {
                 this.finalScore = result.score;
                 this.finalSeverity = result.severity;
-                
+
                 const metricsInValidCombos = new Set();
                 result.validCombos.forEach(combo => {
                     combo.conditions.forEach(cond => metricsInValidCombos.add(cond.metric));
@@ -415,6 +419,46 @@ const app = Vue.createApp({
         }
     },
     computed: {
+        activeRules() {
+            const rules = { hide: new Set(), disable: new Set() };
+            if (!this.extensionYAML) return rules;
+
+            const getRulesFromLevel = (level, ruleType) => {
+                if (level && level[ruleType]) {
+                    const val = level[ruleType];
+                    return Array.isArray(val) ? val : [val];
+                }
+                return null;
+            };
+
+            let hideRule = getRulesFromLevel(this.extensionYAML, 'hide') || ['none'];
+            let disableRule = getRulesFromLevel(this.extensionYAML, 'disable') || ['none'];
+
+            if (this.selectedExtension !== 'None') {
+                const extLevel = this.extensionYAML.extensions[this.selectedExtension];
+                if (extLevel) {
+                    hideRule = getRulesFromLevel(extLevel, 'hide') || hideRule;
+                    disableRule = getRulesFromLevel(extLevel, 'disable') || disableRule;
+
+                    if (this.selectedVersion) {
+                        const verLevel = extLevel[this.selectedVersion];
+                        if (verLevel) {
+                            hideRule = getRulesFromLevel(verLevel, 'hide') || hideRule;
+                            disableRule = getRulesFromLevel(verLevel, 'disable') || disableRule;
+                        }
+                    }
+                }
+            }
+            
+            if (hideRule.length > 0 && hideRule[0].toLowerCase() !== 'none') {
+                hideRule.forEach(val => rules.hide.add(val));
+            }
+            if (disableRule.length > 0 && disableRule[0].toLowerCase() !== 'none') {
+                disableRule.forEach(val => rules.disable.add(val));
+            }
+
+            return rules;
+        },
         vector() {
             return this.vectorInstance.raw;
         },
@@ -437,11 +481,10 @@ const app = Vue.createApp({
     async beforeMount() {
         await this.loadConfigData();
         await this.loadExtensionData();
-        
+
         if (window.location.hash) {
            this.setButtonsToVector(window.location.hash.slice(1));
         } else {
-           this.selectedExtension = 'None';
            this.updateScores();
         }
     },
@@ -449,7 +492,7 @@ const app = Vue.createApp({
         window.addEventListener("hashchange", () => {
             this.setButtonsToVector(window.location.hash.slice(1));
         });
-        
+
         window.addEventListener('scroll', this.handleScroll);
 
         const headerElement = document.getElementById('header');

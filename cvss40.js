@@ -1,5 +1,5 @@
-// Copyright FIRST, Red Hat, and contributors
-// SPDX-License-Identifier: BSD-2-Clause
+// Original version: Copyright FIRST, Red Hat, and contributors
+// Current version: Copyright (C) KSEC - Erez Kalman
 
 /**
  * Rounds a number to a specified number of decimal places using the "Round Half Up" method.

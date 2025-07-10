@@ -78,7 +78,7 @@
 
         </header>
 
-        <main class="columns" :style="{'margin-top': header_height + 10 + 'px'}">
+        <main class="columns" :style="{'margin-top': header_height + 10 + 'px'}" v-if="cvssConfigData">
             <h6 id="cvssReference" style="width: 100%; max-width: 1065px; margin: 10px;">
                 Hover over metric names and metric values for a summary of the information in the official
                 <a href="https://www.first.org/cvss/v4.0/specification-document" target="_blank">
@@ -109,7 +109,6 @@
                 </span>
             </h6>
             <div class="column col-10 col-xl-12">
-                <!-- Extension Selection Dropdowns -->
                 <div class="extension-selector-container">
                     <div class="form-group">
                         <label class="form-label" for="ext-select">Extension</label>
@@ -128,35 +127,37 @@
                      <button class="btn btn-primary btn-sm scroll-btn" @click="scrollToExtensionMetrics" v-if="selectedExtension !== 'None'">↓ Go to {{ selectedExtension }} Metrics</button>
                 </div>
 
-                <!-- CVSS Base Metrics -->
-                <div class="metric-type" v-for="(metricTypeData, metricType) in cvssConfigData" :key="metricType">
-                    <h4 class="text-center" :id="metricType.replace(/\s+/g, '-')">
-                        {{ metricType }}
-                    </h4>
-                    <div class="metric-group" v-for="(metricGroupData, metricGroup) in metricTypeData.metric_groups" :key="metricGroup">
-                        <h5 class="text-center">{{ metricGroup }}</h5>
-                        <div>
-                            <div class="" v-for="(metricData, metric) in metricGroupData" :key="metric">
-                                <div class="columns hide-xl mb-2">
-                                    <div class="col-3 text-right pr-2" v-if="metricData.tooltip"><abbr :title="metricData.tooltip">{{ metric }}</abbr>:</div>
-                                    <div class="col-3 text-right pr-2" v-else>{{metric}}:</div>
-                                    <div class="col-9 columns">
-                                        <div class="col-2 pl-2" v-for="(optionData, option) in metricData.options" :key="option">
-                                            <button :class="buttonClass(vectorInstance.metrics[metricData.short] == optionData.value)" v-if="option"
-                                                    @click="onButton(metricData.short, optionData.value)">
-                                                <abbr v-if="optionData.tooltip" :title="optionData.tooltip">{{ option }}</abbr>
-                                                <span v-else>{{ option }}</span>
-                                            </button>
+                <template v-for="(metricTypeData, metricType) in cvssConfigData" :key="metricType">
+                    <div class="metric-type" v-if="!activeRules.hide.has(metricType)">
+                        <h4 class="text-center" :id="metricType.replace(/\s+/g, '-')">
+                            {{ metricType }}
+                        </h4>
+                        <div class="metric-group" v-for="(metricGroupData, metricGroup) in metricTypeData.metric_groups" :key="metricGroup">
+                            <h5 class="text-center">{{ metricGroup }}</h5>
+                            <div>
+                                <template v-for="(metricData, metric) in metricGroupData" :key="metric">
+                                    <div class="" v-if="!activeRules.hide.has(metricData.short)">
+                                        <div class="columns hide-xl mb-2">
+                                            <div class="col-3 text-right pr-2" v-if="metricData.tooltip"><abbr :title="metricData.tooltip">{{ metric }}</abbr>:</div>
+                                            <div class="col-3 text-right pr-2" v-else>{{metric}}:</div>
+                                            <div class="col-9 columns">
+                                                <div class="col-2 pl-2" v-for="(optionData, option) in metricData.options" :key="option">
+                                                    <button :class="buttonClass(vectorInstance.metrics[metricData.short] == optionData.value)" v-if="option"
+                                                            @click="onButton(metricData.short, optionData.value)"
+                                                            :disabled="isMetricDisabled(metricData, metricType)">
+                                                        <abbr v-if="optionData.tooltip" :title="optionData.tooltip">{{ option }}</abbr>
+                                                        <span v-else>{{ option }}</span>
+                                                    </button>
+                                                </div>
+                                            </div>
                                         </div>
-                                    </div>
-                                </div>
-                                <!-- Other responsive layouts... -->
+                                        </div>
+                                </template>
                             </div>
                         </div>
                     </div>
-                </div>
+                </template>
 
-                <!-- Extension Metrics -->
                 <div class="metric-type" v-if="currentExtensionMetrics" id="extension-metrics-section" :key="selectedExtension">
                     <h4 class="text-center">{{ selectedExtension }} Metrics</h4>
                     <div class="metric-group">
@@ -172,15 +173,13 @@
                                     </div>
                                 </div>
                             </div>
-                            <!-- Other responsive layouts for extension metrics can be added here -->
-                        </div>
+                            </div>
                     </div>
                 </div>
 
             </div>
         </main>
-         <!-- Scroll to Top Button -->
-        <button class="btn btn-primary btn-action s-circle scroll-to-top" v-if="showScrollToTop" @click="scrollToTop">
+         <button class="btn btn-primary btn-action s-circle scroll-to-top" v-if="showScrollToTop" @click="scrollToTop">
             <i class="icon icon-arrow-up"></i>
         </button>
     </div>
