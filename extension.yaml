@@ -60,6 +60,31 @@ extensions:
           if_false:
             math: MUL
             val: -0.06
+        CLA:
+          name: "Data Classification"
+          help: "Data Classification of direct/indirect system/data (whichever is higher). Full value definitions are available in SFSS-019: https://btegrc.lightning.force.com/lightning/n/Browse_Catalog?c__doc=SFSS-019"
+          type: [MC, RE, CO, IN, PU]
+          values:
+            MC:
+              help: "Mission-Critical Data is Data that is critical to the continued success of Salesforce and is key to the company’s survivability. This Data is almost always restricted by law, regulation, NDA, and/ or contract (e.g., MSA and/or DPA) and must only be shared with customers, partners, and others under prior internal authorization and adequate contractual arrangement.  Data under this classification is not to be shared within Salesforce without the consent of the Data (Business) Owner and should never be shared outside of Salesforce. Access to this Data must be very limited to only those needing it to perform their job duties."
+              math: MUL
+              val: 0.2
+            RE:
+              help: "Restricted Data is Data that is likely to be restricted by law, regulation, NDA, and/or contract (e.g.,MSA and/or DPA) and must only be shared with customers, partners, and others under prior internal authorization and adequate contractual arrangement. Data under this classification is not to be shared within or outside of Salesforce without the consent of the Data (Business) Owner. Access to this Data must be limited to only those needing it to perform their job duties."
+              math: MUL
+              val: 0.1
+            CO:
+              help: "Confidential Data may be restricted by law, regulation, and/or contract (e.g., MSA and/or DPA) and should only be shared with customers, partners, and others under prior adequate contractual arrangement or on an as-needed basis with those who must have it to perform their job duties."
+              math: MUL
+              val: 0
+            IN:
+              help: "Internal Data is Data that is appropriate for viewing or use by all Salesforce employees and/or Contingent Workers. Internal Data may be restricted by law, regulation, and/or contract (e.g.,MSA and/or DPA) and is not meant to be broadcast publicly but can be shared with customers, partners, and others under prior adequate contractual arrangement."
+              math: MUL
+              val: -0.1
+            PU:
+              help: "Public Data is Data that is meant for public use. Public Data is meant to be viewed, but not altered, by the public."
+              math: MUL
+              val: -0.2
       combos:
         - name: "AKC and EXT"
           conditions:
@@ -89,7 +114,7 @@ extensions:
               value: T
           modifier:
             math: ADD
-            val: 0.1
+            val: 0.5
         - name: "ICTS and AKC"
           conditions:
             - metric: ICTS
