@@ -233,7 +233,13 @@ const app = Vue.createApp({
                     { text: 'False (F)', value: 'F' }
                 ];
             }
-            return metricData.type.map(opt => ({ text: opt, value: opt }));
+            return metricData.type.map(opt => {
+                let buttonText = opt;
+                if (metricData.values && metricData.values[opt] && metricData.values[opt].name) {
+                    buttonText = `${metricData.values[opt].name} (${opt})`;
+                }
+                return { text: buttonText, value: opt };
+            });
         },
         getExtensionOptionHelp(metricData, optionValue) {
             if (metricData.type === 'BOOL') {
